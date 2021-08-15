@@ -6,12 +6,27 @@ import {
   KeyboardAvoidingView,
   TextInput,
   TouchableOpacity,
+  Modal,
+  FlatList,
+  TouchableWithoutFeedback,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Countries } from './countries';
 
 export function AuthenticationScreen({ navigation }) {
   let textInput = useRef(null);
+  let defaultCountryCode = '+254';
+  let defaultMaskCountry = "720 000 000"
   const [phoneNumber, setPhoneNumber] = useState('');
   const [focusInput, setFocusInput] = useState(true);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [dataCountries, setDataCountries] = useState(Countries);
+  const [countryCode, setCountryCode] = useState(defaultCountryCode);
+  const [placeholder, setPlaceholder] = useState(defaultMaskCountry);
+
+  const onShowHidenModal = () => {
+    setModalVisible(!modalVisible);
+  };
 
   const onChangePhone = number => {
     setPhoneNumber(number);
@@ -32,6 +47,69 @@ export function AuthenticationScreen({ navigation }) {
     setFocusInput(false);
   };
 
+  const filterCountries = val => {
+    if (val) {
+      const countryData = dataCountries.filter(
+        obj => obj.en.indexOf(val) > -1 || obj.dialCode.indexOf(val) > -1,
+      );
+      setDataCountries(countryData);
+    } else {
+      setDataCountries(dataCountries);
+    }
+  };
+
+  const onCountryChange = item => {
+    setCountryCode(item.dialCode);
+    setPlaceholder(item.mask);
+    onShowHidenModal();
+  };
+
+  let renderModal = () => {
+    return (
+      <Modal
+        animationType="slide"
+        transparent={false}
+        visible={modalVisible}
+        onRequestClose={onShowHidenModal}>
+        <SafeAreaView style={{ flex: 1 }}>
+          <View style={styles.modalContainer}>
+            <View style={styles.filterInputContainer}>
+              <TextInput
+                autoFocus={true}
+                onChangeText={filterCountries}
+                placeholder="filter"
+                focusable={true}
+                style={styles.focusInputStyle}
+              />
+            </View>
+            <FlatList
+              style={{ flex: 1 }}
+              data={dataCountries}
+              extraData={dataCountries}
+              keyExtractor={(item, index) => index.toString()}
+              renderItem={({ item }) => (
+                <TouchableWithoutFeedback onPress={() => onCountryChange(item)}>
+                  <View style={styles.countryContainer}>
+                    <View style={styles.countryItem}>
+                      <Text style={styles.countryItemName}>{item.en}</Text>
+                      <Text style={styles.countryItemCode}>{item.dialCode}</Text>
+                    </View>
+                  </View>
+                </TouchableWithoutFeedback>
+              )}
+            />
+          </View>
+        </SafeAreaView>
+
+        <TouchableOpacity
+          onPress={onShowHidenModal}
+          style={styles.closeButtonStyle}>
+          <Text style={styles.closeButtonText}>CLOSE</Text>
+        </TouchableOpacity>
+      </Modal>
+    );
+  };
+
   useEffect(() => {
     textInput.focus();
   }, []);
@@ -48,21 +126,25 @@ export function AuthenticationScreen({ navigation }) {
         <View
           style={[
             styles.containerInput,
-            { borderBottomColor: phoneNumber ? '#00bcd4' : 'gray' },
+            { borderBottomColor: focusInput ? '#00bcd4' : '#ffffff' },
           ]}>
-          <View>
-            <Text style={styles.openDialogView}>+254 |</Text>
-          </View>
+          <TouchableOpacity onPress={onShowHidenModal}>
+            <View>
+              <Text style={styles.openDialogView}>{countryCode + ' |'}</Text>
+            </View>
+          </TouchableOpacity>
+          {renderModal()}
           <TextInput
             ref={input => (textInput = input)}
             style={styles.phoneInputStyle}
-            placeholder="720 123 456"
+            placeholder={placeholder}
             keyboardType="numeric"
             value={phoneNumber}
             onChangeText={onChangePhone}
             secureTextEntry={false}
             onFocus={onChangeFocus}
             onBlur={onChangeBlur}
+            autoFocus={focusInput}
           />
         </View>
 
@@ -131,5 +213,56 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  modalContainer: {
+    paddingTop: 15,
+    paddingLeft: 25,
+    paddingRight: 25,
+    flex: 1,
+    backgroundColor: '#ffffff',
+  },
+  focusInputStyle: {
+    flex: 1,
+    paddingTop: 10,
+    paddingBottom: 10,
+    backgroundColor: 'white',
+    color: '#424242',
+  },
+  countryContainer: {
+    flex: 1,
+    borderColor: 'black',
+    borderTopWidth: 1,
+    padding: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  countryItem: {
+    flex: 1,
+    flexDirection: 'row',
+    paddingLeft: 5,
+  },
+  countryItemName: {
+    fontSize: 16,
+    flex: 1,
+  },
+  countryItemCode: {
+    fontSize: 15,
+  },
+  filterInputContainer: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  closeButtonStyle: {
+    padding: 12,
+    alignItems: 'center',
+  },
+  closeButtonText: {
+    padding: 5,
+    fontSize: 20,
+    color: 'black',
+    fontWeight: 'bold',
   },
 });
