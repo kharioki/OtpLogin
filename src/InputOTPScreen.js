@@ -13,6 +13,7 @@ const Verification = () => {
   
   const clockCall = useRef();
   const defaultCountdown = 60;
+  const lengthInput = 6;
   const [countdown, setCountdown] = useState(defaultCountdown);
 const navigation=useRouter()
   const textInput = useRef(null);
@@ -82,7 +83,7 @@ const decrementClock =useCallback(()=> {
     }
   };
   const onChangeNumber = () => {
-   navigation.goBack();
+    navigation.goBack();
   };
 
   useEffect(()=> {
