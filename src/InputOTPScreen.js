@@ -1,108 +1,119 @@
 /* eslint-disable react-native/no-inline-styles */
-import React, { useState, useEffect, useRef } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  StyleSheet,
-  TouchableOpacity,
-  KeyboardAvoidingView,
-} from 'react-native';
 
-export function InputOTPScreen({ navigation }) {
-  let textInput = useRef(null);
-  let clockCall = useRef(null);
-  const lengthInput = 6;
-  const defaultCountdown = 30;
-  const [internalVal, setInternalVal] = useState('');
+
+
+import { View, Text, TouchableOpacity,  StyleSheet, TextInput, } from "react-native";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import {  useRouter} from "expo-router";
+import {} from "expo-status-bar";
+import { KeyboardAvoidingView } from "native-base";
+
+
+const Verification = () => {
+  
+  const clockCall = useRef();
+  const defaultCountdown = 60;
   const [countdown, setCountdown] = useState(defaultCountdown);
-  const [enableResend, setEnableResend] = useState(false);
-
+const navigation=useRouter()
+  const textInput = useRef(null);
+const [enableResend, setEnableResend ]=useState(false)
+const decrementClock =useCallback(()=> {
+  if (countdown === 0) {
+    setEnableResend (true);
+    setCountdown(0);
+    clearInterval(clockCall.current);
+  } else {
+    setCountdown(countdown - 1);
+  }
+}, [countdown])
   useEffect(() => {
-    clockCall.current = setInterval(() => {
+    clockCall.current= window.setInterval(() => {
       decrementClock();
     }, 1000);
     return () => {
-      clearInterval(clockCall);
+      clearInterval(clockCall.current);
     };
-  }, []);
+  }, [decrementClock]);
 
-  const decrementClock = () => {
-    if (countdown === 0) {
-      setEnableResend(true);
-      setCountdown(0);
-      clearInterval(clockCall);
-    } else {
-      setCountdown(countdown - 1);
-    }
-  };
+    const [otpCode, setOtpCode] = useState(['']);
+    const handleOtpInputChange = (index, text) => {
+        const updatedOtpCode = [...otpCode];
+        updatedOtpCode[index] = text;
+        setOtpCode(updatedOtpCode);
+      };
 
-  const onChangeText = val => {
-    setInternalVal(val);
-    if (val.length === lengthInput) {
-      navigation.navigate('Home');
-    }
-  };
-
-  const onChangeNumber = () => {
-    navigation.goBack();
-  };
-
-  const onResendOTP = () => {
+        const onResendOTP = () => {
     if (enableResend) {
       setCountdown(defaultCountdown);
-      setEnableResend(false);
-      clearInterval(clockCall);
+      setEnableResend (false);
+      clearInterval(clockCall.current);
 
-      clockCall.current = setInterval(() => {
+      clockCall.current = window.setInterval(() => {
         decrementClock();
       }, 1000);
     }
   };
-
-  useEffect(() => {
-    textInput.focus();
+      const handlePasteFromClipboard =  (text) => {
+   
+      if(text.length<=1) {
+        const updatedOtpCode = [...otpCode];
+        updatedOtpCode[0] = text;
+        setOtpCode(updatedOtpCode);
+      }else {
+        const formattedOTP= text.slice(0, 6); 
+        setOtpCode([...formattedOTP]);
+      }
+    
+    
+      };
+        useEffect(() => {
+    textInput.current?.focus();
+  
   }, []);
+  const handleDeleteKeyPress = (event, index) => {
+    if (event.nativeEvent.key === 'Backspace' && index===5) {
+      // delete the entire code
+    setOtpCode([''])
+    } 
+    if(event.nativeEvent.key !== 'Backspace' && index===5) {
+      const updatedOtpCode=[...otpCode]
+      updatedOtpCode[index] = ""
+      setOtpCode(updatedOtpCode);
+    }
+  };
+  const onChangeNumber = () => {
+   navigation.goBack();
+  };
 
+  useEffect(()=> {
+    if (otpCode.length === lengthInput) {
+      navigation.navigate('Home');
+    }
+  }, [otpCode])
   return (
-    <View style={styles.container}>
+    <View style={styles.container} className='bg-white'>
+    
       <KeyboardAvoidingView
         keyboardVerticalOffset={50}
         behavior="padding"
         style={styles.keyboardAvoidingView}>
-        <Text style={styles.textTitle}>Please the OTP code sent via SMS</Text>
+        <Text style={styles.textTitle}>Enter the OTP code sent via SMS</Text>
         <View>
-          <TextInput
-            ref={input => (textInput = input)}
-            style={{ width: 0, height: 0 }}
-            onChangeText={onChangeText}
-            value={internalVal}
-            maxLength={lengthInput}
-            returnKeyType="done"
-            keyboardType="numeric"
-          />
+  
           <View style={styles.inputContainer}>
-            {Array(lengthInput)
-              .fill(0)
-              .map((_, i) => (
-                <View
-                  key={i}
-                  style={[
-                    styles.cellView,
-                    {
-                      borderBottomColor:
-                        i === internalVal.length ? '#fb6c6a' : '#234db7',
-                    },
-                  ]}>
-                  <Text
-                    style={styles.cellText}
-                    onPress={() => textInput.focus()}>
-                    {internalVal && internalVal.length > 0
-                      ? internalVal[i]
-                      : ' '}
-                  </Text>
-                </View>
-              ))}
+          {Array(6).fill(0).map((_, i)=> (
+  <TextInput
+  ref={i===0? textInput : null}
+key={i}
+
+  style={styles.cellView}
+  keyboardType="numeric"
+    maxLength={i===0? 6: 1}
+onKeyPress={(e)=>handleDeleteKeyPress(e, i)}
+    onChangeText={text => i===0? handlePasteFromClipboard(text): handleOtpInputChange(i, text)}
+    value={otpCode[i] || ''}
+  />
+))}
           </View>
         </View>
 
@@ -129,6 +140,8 @@ export function InputOTPScreen({ navigation }) {
   );
 }
 
+export default Verification
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -150,11 +163,15 @@ const styles = StyleSheet.create({
   },
   cellView: {
     paddingVertical: 11,
+    paddingHorizontal: 11,
     width: 40,
     margin: 5,
     justifyContent: 'center',
     alignItems: 'center',
     borderBottomWidth: 1.5,
+    borderBottomColor: "rgb(20 184 166)",
+    fontSize: 24,
+    lineHeight:32
   },
   cellText: {
     textAlign: 'center',
@@ -164,8 +181,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flex: 1,
     // justifyContent: 'flex-end',
+    position:"absolute",
     alignItems: 'flex-end',
-    marginBottom: 50,
+    bottom: 50,
   },
   btnChangeNumber: {
     width: 150,
